@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual e Testes - API de Indicadores</title>
+    <style>
+        :root {
+            --bg-grad-start: #0f172a;
+            --bg-grad-end: #1e1b4b;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary: #818cf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-grad-start), var(--bg-grad-end));
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeIn 1s ease-out;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--primary);
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .endpoint-badge {
+            background: rgba(129, 140, 248, 0.2);
+            color: #818cf8;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        input,
+        select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.2);
+        }
+
+        select option {
+            background: var(--bg-grad-end);
+            color: white;
+        }
+
+        button {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(139, 92, 246, 0.5);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        pre {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            border: 1px solid var(--glass-border);
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            max-height: 400px;
+            margin-top: 1.5rem;
+            display: none;
+        }
+
+        pre.active {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            border-bottom: 2px solid transparent;
+            padding-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        button.loading .loader {
+            display: inline-block;
+        }
+
+        button.loading span {
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Painel de Testes da API</h1>
+            <p class="subtitle">Indicadores Financeiros (Ipeadata)</p>
+        </header>
+
+        <div class="nav-links">
+            <a href="#testes">🧪 Interface de Testes</a>
+            <a href="/api-docs" target="_blank">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path
+                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                    </path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                Swagger UI Oficial
+            </a>
+        </div>
+
+        <!-- Endpoint 1: Variação Mensal -->
+        <div class="glass-panel" id="testes">
+            <h2>
+                Variação Mensal
+                <span class="endpoint-badge">GET /consulta_indice_variacao_mensal</span>
+            </h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+                Busca a variação de um determinado mês para um índice.
+            </p>
+
+            <form id="formMensal" onsubmit="handleRequest(event, 'Mensal')">
+                <div class="form-group">
+                    <div>
+                        <label>Índice Mapeado</label>
+                        <select id="indiceMensal" required>
+                            <option value="IPCA">IPCA</option>
+                            <option value="IGPM">IGP-M</option>
+                            <option value="INCC">INCC</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Ano (Ex: 2024)</label>
+                        <input type="number" id="anoMensal" required value="2024" min="1980" max="2050">
+                    </div>
+                    <div>
+                        <label>Mês (Ex: 1 ou 01)</label>
+                        <input type="number" id="mesMensal" required value="1" min="1" max="12">
+                    </div>
+                </div>
+
+                <button type="submit" id="btnMensal">
+                    <span>Testar Endpoint</span>
+                    <div class="loader"></div>
+                </button>
+            </form>
+
+            <pre id="resultMensal"></pre>
+        </div>
+
+        <!-- Endpoint 2: Série Histórica -->
+        <div class="glass-panel">
+            <h2>
+                Série Histórica
+                <span class="endpoint-badge">GET /consulta_indice_serie_historica</span>
+            </h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+                Busca todas as datas cadastradas para o índice, calculando o percentual de variação mensal. Permite
+                filtro opcional por data.
+            </p>
+
+            <form id="formHistorico" onsubmit="handleRequest(event, 'Historico')">
+                <div class="form-group">
+                    <div>
+                        <label>Série (Ex: IPCA12)</label>
+                        <select id="indiceHistorico" required>
+                            <option value="IPCA12">IPCA12</option>
+                            <option value="IGPM12">IGPM12</option>
+                            <option value="INCC12">INCC12</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Ano (Ex: 2024)</label>
+                        <input type="number" id="anoHistorico" min="1980" max="2050">
+                    </div>
+                    <div>
+                        <label>Mês (Ex: 1 ou 01)</label>
+                        <input type="number" id="mesHistorico" min="1" max="12">
+                    </div>
+                </div>
+
+                <button type="submit" id="btnHistorico">
+                    <span>Testar Endpoint</span>
+                    <div class="loader"></div>
+                </button>
+            </form>
+
+            <pre id="resultHistorico"></pre>
+        </div>
+
+        <!-- Endpoint 3: Listar Todos / Metadados -->
+        <div class="glass-panel">
+            <h2>
+                Listar Indicadores e Metadados
+                <span class="endpoint-badge">GET /indicators</span>
+            </h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+                Recupera os mapeamentos disponíveis configurados em runtime nesta API.
+            </p>
+
+            <button type="button" id="btnListagem" onclick="handleListRequest()">
+                <span>Visualizar Listagem</span>
+                <div class="loader"></div>
+            </button>
+
+            <pre id="resultListagem"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = '/api/v1/indicators';
+
+        async function fetchData(url, resultElementId, btnId) {
+            const btn = document.getElementById(btnId);
+            const resultBlock = document.getElementById(resultElementId);
+
+            btn.classList.add('loading');
+            btn.disabled = true;
+            resultBlock.classList.remove('active');
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                resultBlock.textContent = JSON.stringify(data, null, 4);
+                resultBlock.classList.add('active');
+            } catch (error) {
+                resultBlock.textContent = `Erro na requisição:\n${error.message}`;
+                resultBlock.classList.add('active');
+            } finally {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        function handleRequest(event, type) {
+            event.preventDefault();
+
+            if (type === 'Mensal') {
+                const indice = document.getElementById('indiceMensal').value;
+                const ano = document.getElementById('anoMensal').value;
+                const mes = document.getElementById('mesMensal').value;
+
+                const url = `${API_BASE_URL}/consulta_indice_variacao_mensal?indice=${indice}&ano=${ano}&mes=${mes}`;
+                fetchData(url, 'resultMensal', 'btnMensal');
+            }
+            else if (type === 'Historico') {
+                const indice = document.getElementById('indiceHistorico').value;
+                const ano = document.getElementById('anoHistorico').value;
+                const mes = document.getElementById('mesHistorico').value;
+
+                let query = `?indice=${indice}`;
+                if (ano) query += `&ano=${ano}`;
+                if (mes) query += `&mes=${mes}`;
+
+                const url = `${API_BASE_URL}/consulta_indice_serie_historica${query}`;
+                fetchData(url, 'resultHistorico', 'btnHistorico');
+            }
+        }
+
+        function handleListRequest() {
+            fetchData(API_BASE_URL, 'resultListagem', 'btnListagem');
+        }
+    </script>
+
+</body>
+
+</html>
