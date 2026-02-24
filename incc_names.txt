@@ -1,0 +1,7 @@
+IGP_INCCG -> INCC-DI
+IGP12_INCC1012 -> INCC-10 - geral - índice (ago. 1994 = 100)
+IGP12_INCC12 -> INCC-DI - geral - índice (ago. 1994 = 100)
+IGP12_INCCG12 -> INCC-DI
+IGP12_INCCMG12 -> INCC-M
+IGP12_INCCMG1D12 -> INCC-M - 1º decêndio
+IGP12_INCCMG2D12 -> INCC-M - 2º decêndio

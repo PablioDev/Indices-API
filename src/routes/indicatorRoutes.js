@@ -174,7 +174,7 @@ router.get('/consulta_indice_serie_historica', indicatorController.getHistorical
  *       - in: path
  *         name: code
  *         required: true
- *         description: Código da série no Ipeadata (ex: PRECOS12_IPCAG12)
+ *         description: Código da série no Ipeadata (ex PRECOS12_IPCAG12)
  *         schema:
  *           type: string
  *     responses:

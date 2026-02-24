@@ -5,12 +5,12 @@ const mainIndicators = [
     // Indicadores originais
     { id: 'IPCA', code: 'PRECOS12_IPCAG12', description: 'Índice Nacional de Preços ao Consumidor Amplo (IPCA)' },
     { id: 'IGPM', code: 'IGP12_IGPMG12', description: 'Índice Geral de Preços - Mercado (IGP-M)' },
-    { id: 'INCC', code: 'PRECOS12_INCC12', description: 'Índice Nacional de Custo da Construção (INCC)' },
+    { id: 'INCC', code: 'IGP12_INCCG12', description: 'Índice Nacional de Custo da Construção (INCC)' },
 
     // Novos indicadores de série
     { id: 'IPCA12', code: 'PRECOS12_IPCA12', description: 'Índice Nacional de Preços ao Consumidor Amplo (IPCA12)' },
     { id: 'IGPM12', code: 'IGP12_IGPM12', description: 'Índice Geral de Preços - Mercado (IGPM12)' },
-    { id: 'INCC12', code: 'IGP12_INCC12', description: 'Índice Nacional de Custo da Construção (INCC12)' }
+    { id: 'INCC12', code: 'IGP12_INCCMG12', description: 'Índice Nacional de Custo da Construção (INCC12)' }
 ];
 
 /**

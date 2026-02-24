@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark-theme">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integração - IPEA p/ ERP Mega</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+
+<body>
+    <div class="app-background"></div>
+    <div class="app-container">
+
+        <!-- Header -->
+        <header class="topbar slide-down">
+            <div class="brand">
+                <div class="logo-box">API</div>
+                <h1>Integração <span class="gradient-text">ERP Mega</span></h1>
+            </div>
+            <div class="header-actions">
+                <button id="btnSyncNow" class="btn btn-primary glow-effect">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Sincronizar Agora
+                </button>
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav fade-in" style="animation-delay: 0.1s; opacity: 0;">
+            <button class="tab-btn active" data-target="configTab">Parâmetros de Integração</button>
+            <button class="tab-btn" data-target="logsTab">Histórico / Logs</button>
+        </div>
+
+        <!-- Main Grid -->
+        <main class="dashboard-grid fade-in" style="animation-delay: 0.2s;">
+
+            <!-- Painel de Configurações -->
+            <section id="configTab" class="tab-content active card glass-panel config-panel">
+                <div class="card-header">
+                    <h2>Parâmetros</h2>
+                    <span class="badge" id="statusBadge">Status: Verificando...</span>
+                </div>
+                <form id="configForm">
+                    <div class="form-group">
+                        <label for="authUrl">URL de Autenticação (Login Mega)</label>
+                        <input type="url" id="authUrl" name="authUrl"
+                            placeholder="http://10.95.11.143:8891/seguranca/login">
+                    </div>
+                    <div class="form-group">
+                        <label for="apiUrl">URL de Sincronização (Destino de Dados)</label>
+                        <input type="url" id="apiUrl" name="apiUrl" placeholder="http://10.95.11.143:8891/indices"
+                            required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="apiUser">Usuário do ERP</label>
+                            <input type="text" id="apiUser" name="apiUser" placeholder="admin@erp">
+                        </div>
+                        <div class="form-group half">
+                            <label for="apiPassword">Senha <span class="hint">(Vazio = manter atual)</span></label>
+                            <input type="password" id="apiPassword" name="apiPassword" placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cronExpression">Frequência (Cron Expression)</label>
+                        <input type="text" id="cronExpression" name="cronExpression" placeholder="0 8 * * *">
+                        <small>Padrão: "0 8 * * *" sincroniza todo dia às 08:00 AM.</small>
+                    </div>
+
+                    <hr style="border:1px solid var(--border-glass); margin: 2rem 0;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                        <h3 style="margin-bottom: 0; font-size:1.1rem;">De-Para de Índices (Múltiplas Variações)</h3>
+                        <button type="button" id="btnAddMapping" class="btn btn-secondary"
+                            style="padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.9rem; background: var(--border-glass); border: none; color: white; cursor: pointer;">+
+                            Adicionar</button>
+                    </div>
+
+                    <div id="mappingContainer"
+                        style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+                        <!-- JS vai injetar as linhas aqui -->
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label class="switch">
+                            <input type="checkbox" id="active" name="active">
+                            <span class="slider round"></span>
+                        </label>
+                        <span class="toggle-label">Ativar Sincronização Automática</span>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-save" id="btnSaveConfig">Salvar Configurações</button>
+                    </div>
+                    <div id="configAlert" class="alert hidden"></div>
+                </form>
+            </section>
+
+            <!-- Painel de Logs -->
+            <section id="logsTab" class="tab-content card glass-panel logs-panel">
+                <div class="card-header">
+                    <h2>Histórico Rápido</h2>
+                    <button id="btnRefreshLogs" class="btn btn-icon" title="Girar para Atualizar">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th>Horário</th>
+                                <th>Status</th>
+                                <th>Descrição</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            <tr>
+                                <td colspan="3" class="text-center">Carregando logs...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="/js/admin.js"></script>
+</body>
+
+</html>
