@@ -217,7 +217,8 @@ label {
 input[type="text"],
 input[type="url"],
 input[type="password"],
-input[type="number"] {
+input[type="number"],
+input[type="time"] {
     width: 100%;
     padding: 0.75rem 1rem;
     background-color: var(--input-bg);

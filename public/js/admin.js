@@ -94,7 +94,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('apiUrl').value = config.apiUrl || '';
                 document.getElementById('authUrl').value = config.authUrl || '';
                 document.getElementById('apiUser').value = config.apiUser || '';
-                document.getElementById('cronExpression').value = config.cronExpression || '0 8 * * *';
+                // Parse cron expression from database into day and time
+                const cronExpr = config.cronExpression || '0 8 1 * *';
+                const cronParts = cronExpr.split(' ');
+
+                let cronDay = '1';
+                let cronTime = '08:00';
+
+                // Ensure it's a valid simple cron format (minute hour dayOfMonth month dayOfWeek)
+                if (cronParts.length >= 5) {
+                    const minute = cronParts[0];
+                    const hour = cronParts[1];
+                    const day = cronParts[2];
+
+                    if (day !== '*') cronDay = day;
+
+                    // Format back to HH:mm for interval UI component
+                    if (hour !== '*' && minute !== '*') {
+                        const formattedMinute = minute.padStart(2, '0');
+                        const formattedHour = hour.padStart(2, '0');
+                        cronTime = `${formattedHour}:${formattedMinute}`;
+                    }
+                }
+
+                document.getElementById('cronDay').value = cronDay;
+                document.getElementById('cronTime').value = cronTime;
                 document.getElementById('active').checked = config.active === 1;
 
                 // Limpa container e injeta os mapeamentos
@@ -155,12 +179,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Construct new Cron Expression given User choices
+        const cronDay = document.getElementById('cronDay').value || '1';
+        const cronTime = document.getElementById('cronTime').value || '08:00';
+
+        let hour = '8';
+        let minute = '0';
+        if (cronTime) {
+            const timeParts = cronTime.split(':');
+            if (timeParts.length === 2) {
+                hour = parseInt(timeParts[0]).toString();
+                minute = parseInt(timeParts[1]).toString();
+            }
+        }
+
+        const cronExpression = `${minute} ${hour} ${cronDay} * *`;
+
         const payload = {
             apiUrl: document.getElementById('apiUrl').value,
             authUrl: document.getElementById('authUrl').value,
             apiUser: document.getElementById('apiUser').value,
             apiPassword: document.getElementById('apiPassword').value, // Envia vazio caso não digitado, backend lida com isso
-            cronExpression: document.getElementById('cronExpression').value,
+            cronExpression: cronExpression,
             active: document.getElementById('active').checked,
             megaMapping: megaMapping
         };

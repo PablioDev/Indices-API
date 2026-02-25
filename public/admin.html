@@ -68,10 +68,17 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="cronExpression">Frequência (Cron Expression)</label>
-                        <input type="text" id="cronExpression" name="cronExpression" placeholder="0 8 * * *">
-                        <small>Padrão: "0 8 * * *" sincroniza todo dia às 08:00 AM.</small>
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="cronDay">Dia do Mês para Integração</label>
+                            <input type="number" id="cronDay" name="cronDay" placeholder="Ex: 5" min="1" max="31">
+                            <small>Executa neste dia, todos os meses.</small>
+                        </div>
+                        <div class="form-group half">
+                            <label for="cronTime">Horário de Execução</label>
+                            <input type="time" id="cronTime" name="cronTime">
+                            <small>Horário em que a integração irá rodar.</small>
+                        </div>
                     </div>
 
                     <hr style="border:1px solid var(--border-glass); margin: 2rem 0;">
