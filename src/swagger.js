@@ -11,8 +11,8 @@ const options = {
         },
         servers: [
             {
-                url: 'http://localhost:3000/api/v1',
-                description: 'Servidor Local (Desenvolvimento)',
+                url: 'http://localhost:9137/api/v1',
+                description: 'Servidor API (Produção)',
             },
         ],
     },
@@ -27,7 +27,7 @@ const specs = swaggerJsdoc(options);
  */
 const swaggerDocs = (app, port) => {
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
-    console.log(`Documentação da API disponível em: http://localhost:${port}/api-docs`);
+    console.log(`Documentação da API disponível em: http://10.95.11.143:${port}/api-docs`);
 };
 
 module.exports = swaggerDocs;

@@ -429,6 +429,11 @@ input:checked+.slider:before {
     box-shadow: 0 0 5px var(--danger);
 }
 
+.dot-warning {
+    background-color: #fbbf24;
+    box-shadow: 0 0 5px #fbbf24;
+}
+
 /* Toasts / Alerts */
 .toast-container {
     position: fixed;

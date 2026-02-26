@@ -41,8 +41,8 @@ npm run dev
 ```
 
 4. Acesse:
-- **Painel de Testes Interativo**: [http://localhost:3000/](http://localhost:3000/)
-- **Documentação Swagger**: [http://localhost:3000/api-docs/](http://localhost:3000/api-docs/)
+- **Painel de Testes Interativo**: [http://localhost:9137/](http://localhost:9137/)
+- **Documentação Swagger**: [http://localhost:9137/api-docs/](http://localhost:9137/api-docs/)
 
 ---
 

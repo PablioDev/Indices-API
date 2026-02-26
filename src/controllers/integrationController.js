@@ -56,11 +56,62 @@ const saveConfig = async (req, res) => {
 const getLogs = async (req, res) => {
     try {
         const db = await dbPromise;
-        const limit = parseInt(req.query.limit) || 100;
+        const limit = parseInt(req.query.limit) || 30;
+        const offset = parseInt(req.query.offset) || 0;
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+        const status = req.query.status;
 
-        // Traz as 100 últimas execuções ordenadas da mais recente para a mais antiga
-        const logs = await db.all('SELECT * FROM IntegrationLogs ORDER BY id DESC LIMIT ?', [limit]);
-        res.json({ success: true, data: logs });
+        let query = 'SELECT * FROM IntegrationLogs';
+        let countQuery = 'SELECT COUNT(*) as total FROM IntegrationLogs';
+        let params = [];
+        let countParams = [];
+        let conditions = [];
+
+        // Trata startDate (inicio do dia)
+        if (startDate) {
+            conditions.push('syncDate >= ?');
+            params.push(`${startDate} 00:00:00`);
+            countParams.push(`${startDate} 00:00:00`);
+        }
+
+        // Trata endDate (fim do dia)
+        if (endDate) {
+            conditions.push('syncDate <= ?');
+            params.push(`${endDate} 23:59:59`);
+            countParams.push(`${endDate} 23:59:59`);
+        }
+
+        // Trata status
+        if (status) {
+            conditions.push('status = ?');
+            params.push(status);
+            countParams.push(status);
+        }
+
+        if (conditions.length > 0) {
+            const whereClause = ' WHERE ' + conditions.join(' AND ');
+            query += whereClause;
+            countQuery += whereClause;
+        }
+
+        query += ' ORDER BY id DESC LIMIT ? OFFSET ?';
+        params.push(limit, offset);
+
+        const totalRow = await db.get(countQuery, countParams);
+        const totalLogs = totalRow ? totalRow.total : 0;
+
+        const logs = await db.all(query, params);
+
+        res.json({
+            success: true,
+            data: logs,
+            pagination: {
+                total: totalLogs,
+                limit,
+                offset
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

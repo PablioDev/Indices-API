@@ -10,6 +10,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAddMapping = document.getElementById('btnAddMapping');
     const mappingContainer = document.getElementById('mappingContainer');
 
+    // Referências Filtros e Paginação
+    const filterStartDate = document.getElementById('filterStartDate');
+    const filterEndDate = document.getElementById('filterEndDate');
+    const filterLimit = document.getElementById('filterLimit');
+    const filterStatus = document.getElementById('filterStatus');
+    const btnApplyFilters = document.getElementById('btnApplyFilters');
+
+    const logsControlsPanel = document.getElementById('logsControlsPanel');
+    const btnToggleFilters = document.getElementById('btnToggleFilters');
+
+    const btnPrevPage = document.getElementById('btnPrevPage');
+    const btnNextPage = document.getElementById('btnNextPage');
+    const paginationInfo = document.getElementById('paginationInfo');
+
+    let currentPage = 1;
+    let currentLimit = 30;
+    let totalLogs = 0;
+
     // Referências Tabs
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -79,6 +97,47 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => svg.classList.remove('spin'), 500);
         });
     });
+
+    btnApplyFilters.addEventListener('click', () => {
+        currentLimit = parseInt(filterLimit.value) || 30;
+        currentPage = 1;
+        const svg = btnRefreshLogs.querySelector('svg');
+        svg.classList.add('spin');
+        loadLogs().finally(() => {
+            setTimeout(() => svg.classList.remove('spin'), 500);
+        });
+    });
+
+    btnPrevPage.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            loadLogs();
+        }
+    });
+
+    btnNextPage.addEventListener('click', () => {
+        const totalPages = Math.ceil(totalLogs / currentLimit) || 1;
+        if (currentPage < totalPages) {
+            currentPage++;
+            loadLogs();
+        }
+    });
+
+    // Função de máscara de data DD/MM/AAAA
+    const applyDateMask = (e) => {
+        let v = e.target.value.replace(/\D/g, '');
+        if (v.length > 2) v = v.substring(0, 2) + '/' + v.substring(2);
+        if (v.length > 5) v = v.substring(0, 5) + '/' + v.substring(5, 9);
+        e.target.value = v;
+    };
+    filterStartDate.addEventListener('input', applyDateMask);
+    filterEndDate.addEventListener('input', applyDateMask);
+
+    if (btnToggleFilters) {
+        btnToggleFilters.addEventListener('click', () => {
+            if (logsControlsPanel) logsControlsPanel.classList.toggle('hidden');
+        });
+    }
 
     // -----------------------------------------
     // Funções
@@ -232,16 +291,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadLogs() {
         try {
-            const res = await fetch('/api/v1/integration/logs?limit=30');
+            // Converte DD/MM/AAAA para YYYY-MM-DD caso preenchido
+            let startDate = filterStartDate.value;
+            let endDate = filterEndDate.value;
+            let status = filterStatus && filterStatus.value ? filterStatus.value : '';
+
+            if (startDate && startDate.includes('/')) {
+                const parts = startDate.split('/');
+                if (parts.length === 3) startDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+            if (endDate && endDate.includes('/')) {
+                const parts = endDate.split('/');
+                if (parts.length === 3) endDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+
+            const offset = (currentPage - 1) * currentLimit;
+
+            let url = `/api/v1/integration/logs?limit=${currentLimit}&offset=${offset}`;
+            if (startDate) url += `&startDate=${startDate}`;
+            if (endDate) url += `&endDate=${endDate}`;
+            if (status) url += `&status=${status}`;
+
+            const res = await fetch(url);
             const data = await res.json();
 
             if (data.success) {
                 renderLogs(data.data);
+
+                if (data.pagination) {
+                    totalLogs = data.pagination.total;
+                    updatePaginationUI();
+                }
             }
         } catch (error) {
             console.error("Erro ao carregar logs:", error);
             logsTableBody.innerHTML = `<tr><td colspan="3" class="text-center" style="color:var(--danger)">Erro ao carregar histórico</td></tr>`;
         }
+    }
+
+    function updatePaginationUI() {
+        const totalPages = Math.ceil(totalLogs / currentLimit) || 1;
+        const startRecord = totalLogs === 0 ? 0 : ((currentPage - 1) * currentLimit) + 1;
+        const endRecord = Math.min(currentPage * currentLimit, totalLogs);
+
+        paginationInfo.textContent = `Mostrando ${startRecord} a ${endRecord} de ${totalLogs} registros`;
+
+        btnPrevPage.disabled = currentPage <= 1;
+        btnNextPage.disabled = currentPage >= totalPages;
     }
 
     function renderLogs(logs) {
@@ -253,6 +349,11 @@ document.addEventListener('DOMContentLoaded', () => {
         logsTableBody.innerHTML = logs.map(log => {
             const dateStr = new Date(log.syncDate).toLocaleString('pt-BR');
             const isSuccess = log.status === 'Sucesso';
+            const isWarning = log.status === 'Atenção' || log.status === 'Já existe' || log.status === 'Aviso';
+
+            let dotClass = 'dot-error';
+            if (isSuccess) dotClass = 'dot-success';
+            else if (isWarning) dotClass = 'dot-warning';
 
             let summary = log.message;
             let details = '';
@@ -272,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="white-space: nowrap">${dateStr}</td>
                     <td>
                         <span class="status-indicator">
-                            <span class="status-dot ${isSuccess ? 'dot-success' : 'dot-error'}"></span>
+                            <span class="status-dot ${dotClass}"></span>
                             ${log.status}
                         </span>
                     </td>

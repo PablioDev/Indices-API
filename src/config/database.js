@@ -3,8 +3,8 @@ const { open } = require('sqlite');
 const path = require('path');
 const fs = require('fs');
 
-// Garante que o diretório "data" exista na raiz do projeto
-const dataDir = path.resolve(__dirname, '../../data');
+// Garante que o banco seja salvo fisicamente na pasta onde o executável for aberto
+const dataDir = process.cwd();
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
 }
@@ -61,7 +61,7 @@ const initializeDb = async () => {
         await db.exec(`
             CREATE TABLE IF NOT EXISTS IntegrationLogs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                syncDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+                syncDate DATETIME DEFAULT (DATETIME('now', 'localtime')),
                 status TEXT,
                 message TEXT
             )

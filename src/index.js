@@ -8,7 +8,8 @@ const { startCronJob } = require('./services/integrationService');
 const swaggerDocs = require('./swagger');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 9137;
+const HOST = process.env.HOST || 'localhost';
 
 // Middlewares
 app.use(cors());
@@ -21,8 +22,10 @@ swaggerDocs(app, PORT);
 app.use('/api/v1/indicators', indicatorRoutes);
 app.use('/api/v1/integration', integrationRoutes);
 
-// Rota raiz servindo o manual em HTML
-app.use('/', express.static('public'));
+const path = require('path');
+
+// Rota raiz servindo o manual em HTML (dentro do snapshot caso use pkg)
+app.use('/', express.static(path.join(__dirname, '../public')));
 
 // Rota de Health check movida para /health
 app.get('/health', (req, res) => {
@@ -41,9 +44,9 @@ initializeDb().then(() => {
     // Inicia os Jobs de Integração
     startCronJob();
 
-    app.listen(PORT, () => {
-        console.log(`Servidor rodando na porta ${PORT}`);
-        console.log(`Acesse: http://localhost:${PORT}`);
+    app.listen(PORT, HOST, () => {
+        console.log(`Servidor rodando na porta ${PORT} no IP ${HOST}`);
+        console.log(`Acesse: http://${HOST}:${PORT}`);
     });
 }).catch(err => {
     console.error('Falha fatal ao inicializar o banco de dados e servidor:', err);

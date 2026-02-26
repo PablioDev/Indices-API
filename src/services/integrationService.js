@@ -21,7 +21,20 @@ let currentCronJob = null;
 const logExecution = async (status, message) => {
     try {
         const db = await dbPromise;
-        await db.run('INSERT INTO IntegrationLogs (status, message) VALUES (?, ?)', [status, message]);
+
+        // Pega a data e hora local do sistema ajustada para o fuso brasileiro, 
+        // ou usa local string e formata para o formato do SQLite (YYYY-MM-DD HH:MM:SS)
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+
+        const localTimestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+
+        await db.run('INSERT INTO IntegrationLogs (syncDate, status, message) VALUES (?, ?, ?)', [localTimestamp, status, message]);
     } catch (err) {
         console.error('Falha ao gravar log no banco:', err);
     }
@@ -198,16 +211,28 @@ const executeSync = async () => {
                     : 'Sem retorno no corpo da mensagem';
 
                 let apiMessage = "Sucesso";
-                if (response.data && response.data.status_message) {
-                    apiMessage = response.data.status_message;
-                } else if (response.data && response.data.message) {
-                    apiMessage = response.data.message;
+                let responseDataObj = response.data;
+
+                // Trata o caso onde a API retorna um array de objetos
+                if (Array.isArray(response.data) && response.data.length > 0) {
+                    responseDataObj = response.data[0];
+                }
+
+                if (responseDataObj && responseDataObj.status_message) {
+                    apiMessage = responseDataObj.status_message;
+                } else if (responseDataObj && responseDataObj.message) {
+                    apiMessage = responseDataObj.message;
                 }
 
                 const summaryMsg = `[${item._description}] Ref: ${item.p_VAL_DT_INDICE} | Valor: ${item.p_VAL_RE_VALOR} | Retorno: ${apiMessage}`;
                 const logData = JSON.stringify({ summary: summaryMsg, details: responseBody });
 
-                await logExecution('Sucesso', logData);
+                // Verifica se a mensagem indica que o índice já existe
+                if (responseDataObj && responseDataObj.status_code === 1 && typeof apiMessage === 'string' && apiMessage.toLowerCase().includes('ja existe')) {
+                    await logExecution('Atenção', logData);
+                } else {
+                    await logExecution('Sucesso', logData);
+                }
                 successCount++;
 
             } catch (error) {
