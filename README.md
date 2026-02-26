@@ -8,8 +8,20 @@ Esta é uma API Node.js desenvolvida para atuar como uma interface simplificada 
 - **Formatação Brasileira Nativa**: Todas as respostas trazem datas no formato `DD/MM/AAAA` e valores utilizando vírgula (`,`) como separador decimal.
 - **Cálculo de Variação Mensal Nativo**: A série histórica já traz pré-calculada a variação percentual baseada no mês anterior.
 - **Filtros Flexíveis**: Busque a variação de um mês específico ou um recorte histórico informando ano e mês.
-- **Interface Gráfica de Teste**: Um dashboard embutido para testar todos os endpoints de forma visual.
+- **Interface de Testes**: Um dashboard web (`/`) para testar todos os endpoints de forma visual.
+- **Painel Administrativo**: Interface avançada de logs e parâmetros embutida na API.
 - **Documentação com Swagger**: Especificação OpenAPI 3.0 interativa disponível.
+
+---
+
+## 🖥️ Painel Administrativo Integrado
+
+A API já acompanha uma interface administrativa interna para gerenciamento da integração com o ERP Mega.
+
+- **URL Padrão**: `http://localhost:9137/admin.html`
+- **Configurações Dinâmicas**: Definição da URL do Mega, usuário, cron fields (dias/horas de execução automática) e senhas pela tela.
+- **De-Para Visual**: Relacionamento nativo de códigos do Mega (ex: `15`) com a respectiva base governamental (ex: `IPCA`).
+- **Histórico de Execuções e Filtros**: Tela de logs com suporte a pesquisa por período de datas (DD/MM/AAAA), seleção flexível de quantidade (limitador) e até buscas diretas por Status (`Sucesso`, `Atenção`, `Erro`, `Aviso`).
 
 ---
 
