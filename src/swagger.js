@@ -1,5 +1,6 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const path = require('path');
 
 const options = {
     definition: {
@@ -11,13 +12,15 @@ const options = {
         },
         servers: [
             {
-                url: 'http://localhost:9137/api/v1',
+                // Relativo ao host que serve a documentação (funciona por localhost ou pelo IP do servidor)
+                url: '/api/v1',
                 description: 'Servidor API (Produção)',
             },
         ],
     },
     // Arquivos que contêm as anotações do Swagger
-    apis: ['./src/routes/*.js'],
+    // Caminho absoluto: relativo ao cwd não funciona quando o serviço roda de outra pasta ou pelo executável
+    apis: [path.join(__dirname, 'routes', '*.js').replace(/\\/g, '/')],
 };
 
 const specs = swaggerJsdoc(options);
@@ -27,7 +30,8 @@ const specs = swaggerJsdoc(options);
  */
 const swaggerDocs = (app, port) => {
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
-    console.log(`Documentação da API disponível em: http://10.95.11.143:${port}/api-docs`);
+    const host = process.env.HOST || 'localhost';
+    console.log(`Documentação da API disponível em: http://${host}:${port}/api-docs`);
 };
 
 module.exports = swaggerDocs;

@@ -5,6 +5,7 @@ const indicatorRoutes = require('./routes/indicatorRoutes');
 const integrationRoutes = require('./routes/integrationRoutes');
 const { initializeDb } = require('./config/database');
 const { startCronJob } = require('./services/integrationService');
+const { adminAuth, isAdminAuthConfigured } = require('./middlewares/adminAuth');
 const swaggerDocs = require('./swagger');
 
 const app = express();
@@ -17,6 +18,9 @@ app.use(express.json());
 
 // Documentação Swagger
 swaggerDocs(app, PORT);
+
+// Painel administrativo e rotas de integração exigem login (registrado antes do express.static)
+app.use(['/admin.html', '/js/admin.js', '/api/v1/integration'], adminAuth);
 
 // Rotas
 app.use('/api/v1/indicators', indicatorRoutes);
@@ -40,6 +44,10 @@ app.use((err, req, res, next) => {
 
 // Inicialização do servidor atrelada ao BD
 initializeDb().then(() => {
+
+    if (!isAdminAuthConfigured()) {
+        console.warn('ATENÇÃO: ADMIN_USER/ADMIN_PASSWORD não definidos no .env. O painel administrativo ficará bloqueado.');
+    }
 
     // Inicia os Jobs de Integração
     startCronJob();

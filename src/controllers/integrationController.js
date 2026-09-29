@@ -1,5 +1,34 @@
 const { dbPromise } = require('../config/database');
 const integrationService = require('../services/integrationService');
+const cron = require('node-cron');
+const { findIndicator } = require('../config/indicators');
+
+const MAX_LOGS_LIMIT = 500;
+
+/**
+ * Valida a expressão CRON e o De-Para recebidos do painel.
+ * Retorna a mensagem de erro, ou null se estiver tudo certo.
+ */
+const validateConfigPayload = (cronExpression, megaMapping) => {
+    if (!cronExpression || !cron.validate(cronExpression)) {
+        return `Expressão de agendamento inválida: "${cronExpression || ''}".`;
+    }
+
+    if (megaMapping !== undefined && megaMapping !== null && !Array.isArray(megaMapping)) {
+        return 'O De-Para de índices deve ser uma lista.';
+    }
+
+    for (const item of megaMapping || []) {
+        if (!item || !Number.isInteger(Number(item.megaCode)) || String(item.megaCode).trim() === '') {
+            return `Código do índice no ERP Mega inválido: "${item && item.megaCode}".`;
+        }
+        if (!findIndicator(item.ipeaCode)) {
+            return `Índice Ipeadata não suportado: "${item.ipeaCode}".`;
+        }
+    }
+
+    return null;
+};
 
 // Recupera a configuração (sem expor a senha no json)
 const getConfig = async (req, res) => {
@@ -26,17 +55,23 @@ const getConfig = async (req, res) => {
 
 // Salva a configuração atualizada
 const saveConfig = async (req, res) => {
-    const { apiUrl, authUrl, apiUser, apiPassword, cronExpression, active, megaMapping } = req.body;
+    const { apiUrl, authUrl, apiUser, apiPassword, cronExpression, active, megaMapping } = req.body || {};
+
+    const validationError = validateConfigPayload(cronExpression, megaMapping);
+    if (validationError) {
+        return res.status(400).json({ success: false, message: validationError });
+    }
+
     try {
         const db = await dbPromise;
         const isActive = active ? 1 : 0;
-        const megaMappingStr = JSON.stringify(megaMapping || {});
+        const megaMappingStr = JSON.stringify(megaMapping || []);
 
         let query = 'UPDATE IntegrationConfig SET apiUrl = ?, authUrl = ?, apiUser = ?, cronExpression = ?, active = ?, megaMapping = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = 1';
         let params = [apiUrl, authUrl, apiUser, cronExpression, isActive, megaMappingStr];
 
         // Só atualizamos a senha se o usuário digitou uma nova
-        if (apiPassword && apiPassword.trim() !== '') {
+        if (typeof apiPassword === 'string' && apiPassword.trim() !== '') {
             query = 'UPDATE IntegrationConfig SET apiUrl = ?, authUrl = ?, apiUser = ?, apiPassword = ?, cronExpression = ?, active = ?, megaMapping = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = 1';
             params = [apiUrl, authUrl, apiUser, apiPassword, cronExpression, isActive, megaMappingStr];
         }
@@ -56,8 +91,8 @@ const saveConfig = async (req, res) => {
 const getLogs = async (req, res) => {
     try {
         const db = await dbPromise;
-        const limit = parseInt(req.query.limit) || 30;
-        const offset = parseInt(req.query.offset) || 0;
+        const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 30, 1), MAX_LOGS_LIMIT);
+        const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
         const status = req.query.status;
@@ -120,6 +155,10 @@ const getLogs = async (req, res) => {
 // Gatilho manual
 const syncNow = async (req, res) => {
     try {
+        if (integrationService.isSyncInProgress()) {
+            return res.status(409).json({ success: false, message: 'Sincronização já em andamento. Aguarde a conclusão e verifique os logs.' });
+        }
+
         // Roda em background a integração real do serviço recém criado
         integrationService.executeSync().catch(console.error);
         res.json({ success: true, message: 'Processo de sincronização iniciado em background. Verifique os logs em instantes.' });

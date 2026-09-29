@@ -403,7 +403,8 @@
                 const ano = document.getElementById('anoMensal').value;
                 const mes = document.getElementById('mesMensal').value;
 
-                const url = `${API_BASE_URL}/consulta_indice_variacao_mensal?indice=${indice}&ano=${ano}&mes=${mes}`;
+                const params = new URLSearchParams({ indice, ano, mes });
+                const url = `${API_BASE_URL}/consulta_indice_variacao_mensal?${params.toString()}`;
                 fetchData(url, 'resultMensal', 'btnMensal');
             }
             else if (type === 'Historico') {
@@ -411,11 +412,11 @@
                 const ano = document.getElementById('anoHistorico').value;
                 const mes = document.getElementById('mesHistorico').value;
 
-                let query = `?indice=${indice}`;
-                if (ano) query += `&ano=${ano}`;
-                if (mes) query += `&mes=${mes}`;
+                const params = new URLSearchParams({ indice });
+                if (ano) params.set('ano', ano);
+                if (mes) params.set('mes', mes);
 
-                const url = `${API_BASE_URL}/consulta_indice_serie_historica${query}`;
+                const url = `${API_BASE_URL}/consulta_indice_serie_historica?${params.toString()}`;
                 fetchData(url, 'resultHistorico', 'btnHistorico');
             }
         }

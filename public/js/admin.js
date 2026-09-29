@@ -32,6 +32,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
 
+    // Escapa texto antes de interpolar em HTML (logs trazem a resposta bruta do ERP)
+    const escapeHtml = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
     // Inicialização
     loadConfig();
     loadLogs();
@@ -154,10 +162,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('authUrl').value = config.authUrl || '';
                 document.getElementById('apiUser').value = config.apiUser || '';
                 // Parse cron expression from database into day and time
-                const cronExpr = config.cronExpression || '0 8 1 * *';
-                const cronParts = cronExpr.split(' ');
+                const cronExpr = config.cronExpression || '0 8 * * *';
+                const cronParts = cronExpr.trim().split(/s+/);
 
-                let cronDay = '1';
+                // Dia vazio = todos os dias ("*" no CRON)
+                let cronDay = '';
                 let cronTime = '08:00';
 
                 // Ensure it's a valid simple cron format (minute hour dayOfMonth month dayOfWeek)
@@ -239,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Construct new Cron Expression given User choices
-        const cronDay = document.getElementById('cronDay').value || '1';
+        const cronDay = document.getElementById('cronDay').value.trim() || '*';
         const cronTime = document.getElementById('cronTime').value || '08:00';
 
         let hour = '8';
@@ -307,10 +316,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const offset = (currentPage - 1) * currentLimit;
 
-            let url = `/api/v1/integration/logs?limit=${currentLimit}&offset=${offset}`;
-            if (startDate) url += `&startDate=${startDate}`;
-            if (endDate) url += `&endDate=${endDate}`;
-            if (status) url += `&status=${status}`;
+            const params = new URLSearchParams({ limit: currentLimit, offset });
+            if (startDate) params.set('startDate', startDate);
+            if (endDate) params.set('endDate', endDate);
+            if (status) params.set('status', status);
+
+            const url = `/api/v1/integration/logs?${params.toString()}`;
 
             const res = await fetch(url);
             const data = await res.json();
@@ -370,20 +381,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             return `
                 <tr class="log-row" style="cursor: pointer; transition: background 0.2s;" onclick="this.nextElementSibling.classList.toggle('hidden')">
-                    <td style="white-space: nowrap">${dateStr}</td>
+                    <td style="white-space: nowrap">${escapeHtml(dateStr)}</td>
                     <td>
                         <span class="status-indicator">
                             <span class="status-dot ${dotClass}"></span>
-                            ${log.status}
+                            ${escapeHtml(log.status)}
                         </span>
                     </td>
-                    <td style="word-break: break-word">${summary}</td>
+                    <td style="word-break: break-word">${escapeHtml(summary)}</td>
                 </tr>
                 <tr class="log-details hidden">
                     <td colspan="3" style="background: rgba(0, 0, 0, 0.2); border-bottom: 1px solid rgba(255,255,255,0.05);">
                         <div style="padding: 1rem;">
                             <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 0.5rem; display: block;">Resposta Bruta da API:</span>
-                            <pre style="white-space: pre-wrap; word-break: break-all; font-size: 0.8rem; color: #cbd5e1; margin: 0; font-family: monospace;">${details}</pre>
+                            <pre style="white-space: pre-wrap; word-break: break-all; font-size: 0.8rem; color: #cbd5e1; margin: 0; font-family: monospace;">${escapeHtml(details)}</pre>
                         </div>
                     </td>
                 </tr>
@@ -429,11 +440,11 @@ document.addEventListener('DOMContentLoaded', () => {
         row.innerHTML = `
             <div class="form-group" style="margin-bottom:0; flex: 1">
                 <label style="font-size: 0.8rem">Cod. Índice ERP Mega</label>
-                <input type="number" class="mega-code" placeholder="Ex: 15" value="${megaCode}" required>
+                <input type="number" class="mega-code" placeholder="Ex: 15" value="${escapeHtml(megaCode)}" required>
             </div>
             <div class="form-group" style="margin-bottom:0; flex: 1.5">
                 <label style="font-size: 0.8rem">Descrição</label>
-                <input type="text" class="mapping-description" placeholder="Ex: IPCA Acumulado" value="${description}">
+                <input type="text" class="mapping-description" placeholder="Ex: IPCA Acumulado" value="${escapeHtml(description)}">
             </div>
             <div class="form-group" style="margin-bottom:0; flex: 1.5">
                 <label style="font-size: 0.8rem">Índice Ipeadata</label>
@@ -441,9 +452,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <option value="IPCA" ${ipeaCode === 'IPCA' ? 'selected' : ''}>IPCA Mensal</option>
                     <option value="IGPM" ${ipeaCode === 'IGPM' ? 'selected' : ''}>IGP-M Mensal</option>
                     <option value="INCC" ${ipeaCode === 'INCC' ? 'selected' : ''}>INCC Mensal</option>
-                    <option value="IPCA12" ${ipeaCode === 'IPCA12' ? 'selected' : ''}>IPCA Acumulado 12m</option>
-                    <option value="IGPM12" ${ipeaCode === 'IGPM12' ? 'selected' : ''}>IGP-M Acumulado 12m</option>
-                    <option value="INCC12" ${ipeaCode === 'INCC12' ? 'selected' : ''}>INCC Acumulado 12m</option>
+                    <option value="IPCA12" ${ipeaCode === 'IPCA12' ? 'selected' : ''}>IPCA Mensal (via nº-índice)</option>
+                    <option value="IGPM12" ${ipeaCode === 'IGPM12' ? 'selected' : ''}>IGP-M Mensal (via nº-índice)</option>
+                    <option value="INCC12" ${ipeaCode === 'INCC12' ? 'selected' : ''}>INCC Mensal (via nº-índice)</option>
                 </select>
             </div>
             <div class="form-group checkbox-group" style="margin-bottom:0; flex: 2; display: flex; align-items: center; justify-content: center;">

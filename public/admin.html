@@ -71,8 +71,8 @@
                     <div class="form-row">
                         <div class="form-group half">
                             <label for="cronDay">Dia do Mês para Integração</label>
-                            <input type="number" id="cronDay" name="cronDay" placeholder="Ex: 5" min="1" max="31">
-                            <small>Executa neste dia, todos os meses.</small>
+                            <input type="number" id="cronDay" name="cronDay" placeholder="Vazio = todos os dias" min="1" max="31">
+                            <small>Executa neste dia, todos os meses. Vazio = todos os dias. Dias 29 a 31 não executam nos meses que não os possuem.</small>
                         </div>
                         <div class="form-group half">
                             <label for="cronTime">Horário de Execução</label>

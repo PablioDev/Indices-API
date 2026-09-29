@@ -2,18 +2,14 @@ const axios = require('axios');
 const ipeaService = require('./ipeaService');
 const { dbPromise } = require('../config/database');
 const cron = require('node-cron');
+const { findIndicator } = require('../config/indicators');
 
-// Mapeamento dos indicadores
-const mainIndicators = [
-    { id: 'IPCA', code: 'PRECOS12_IPCAG12' },
-    { id: 'IGPM', code: 'IGP12_IGPMG12' },
-    { id: 'INCC', code: 'IGP12_INCCG12' },
-    { id: 'IPCA12', code: 'PRECOS12_IPCA12' },
-    { id: 'IGPM12', code: 'IGP12_IGPM12' },
-    { id: 'INCC12', code: 'IGP12_INCCMG12' }
-];
+const REQUEST_TIMEOUT_MS = 30000;
+const CRON_TIMEZONE = 'America/Sao_Paulo';
 
 let currentCronJob = null;
+// Impede que o Cron e o botão "Sincronizar Agora" enviem os mesmos dados em paralelo
+let isSyncRunning = false;
 
 /**
  * Registra um log de execução no banco de dados SQLite.
@@ -50,7 +46,7 @@ const authenticateMega = async (authUrl, apiUser, apiPassword) => {
         const response = await axios.post(authUrl, {
             userName: apiUser,
             password: apiPassword
-        });
+        }, { timeout: REQUEST_TIMEOUT_MS });
 
         // Supondo que a API retorna { token: 'seu_jwt_aqui' }
         if (response.data && response.data.token) {
@@ -92,7 +88,7 @@ const gatherLatestIndicators = async (megaMappingArray) => {
         const { megaCode, ipeaCode, description, zeroIfNegative } = mapItem;
 
         // Acha o código real do Ipea baseado na nossa lista simplificada
-        const indConfig = mainIndicators.find(i => i.id === ipeaCode);
+        const indConfig = findIndicator(ipeaCode);
         if (!indConfig) continue;
 
         try {
@@ -109,14 +105,31 @@ const gatherLatestIndicators = async (megaMappingArray) => {
                 let formattedDate = null;
                 if (latest.VALDATA) {
                     const dateParts = latest.VALDATA.split('T')[0].split('-');
-                    formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                    const year = parseInt(dateParts[0], 10);
+                    const month = parseInt(dateParts[1], 10) - 1; // Mês 0-11
+                    const day = parseInt(dateParts[2], 10);
+                    
+                    const dateObj = new Date(year, month, day);
+                    
+                    // Ajusta para dia útil (pula finais de semana para a próxima segunda-feira)
+                    if (dateObj.getDay() === 6) { // Sábado
+                        dateObj.setDate(dateObj.getDate() + 2);
+                    } else if (dateObj.getDay() === 0) { // Domingo
+                        dateObj.setDate(dateObj.getDate() + 1);
+                    }
+                    
+                    const finalDay = String(dateObj.getDate()).padStart(2, '0');
+                    const finalMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    const finalYear = dateObj.getFullYear();
+                    
+                    formattedDate = `${finalDay}/${finalMonth}/${finalYear}`;
                 }
 
                 // Cálculo do valor final
                 let finalValue = latest.VALVALOR;
 
                 // Aplica o cálculo de variação ((atual / anterior) - 1) * 100 para os números de índice agregados
-                if (['IPCA12', 'IGPM12', 'INCC12'].includes(ipeaCode)) {
+                if (indConfig.isIndexNumber) {
                     if (seriesData.length > 1) {
                         const prev = seriesData[seriesData.length - 2].VALVALOR;
                         const curr = latest.VALVALOR;
@@ -152,9 +165,19 @@ const gatherLatestIndicators = async (megaMappingArray) => {
 };
 
 /**
+ * Indica se há uma sincronização em andamento.
+ */
+const isSyncInProgress = () => isSyncRunning;
+
+/**
  * Função principal que realiza a Sincronização.
  */
 const executeSync = async () => {
+    if (isSyncRunning) {
+        return { success: false, alreadyRunning: true, message: 'Sincronização já em andamento.' };
+    }
+    isSyncRunning = true;
+
     try {
         const db = await dbPromise;
         const config = await db.get('SELECT * FROM IntegrationConfig WHERE id = 1');
@@ -182,6 +205,8 @@ const executeSync = async () => {
             token = await authenticateMega(config.authUrl, config.apiUser, config.apiPassword);
         } else if (!config.authUrl && config.apiUser) {
             await logExecution('Aviso', 'Usuário configurado mas a URL de Autenticação foi esquecida, tentando sem Token.');
+        } else if (config.authUrl && (!config.apiUser || !config.apiPassword)) {
+            await logExecution('Aviso', 'URL de Autenticação configurada mas usuário ou senha não informados, tentando sem Token.');
         }
 
         // 3. Montar cabeçalhos
@@ -203,7 +228,7 @@ const executeSync = async () => {
             const codigoMega = item.p_IND_IN_CODIGO;
 
             try {
-                const response = await axios.post(ingestUrl, singlePayload, { headers });
+                const response = await axios.post(ingestUrl, singlePayload, { headers, timeout: REQUEST_TIMEOUT_MS });
 
                 // Extrai os dados da resposta do Mega
                 const responseBody = response.data
@@ -264,6 +289,8 @@ const executeSync = async () => {
         const errMsg = `[✗] Erro Crítico na Integração. Erro reportado: ${globalError.message}`;
         await logExecution('Erro', errMsg);
         return { success: false, message: errMsg };
+    } finally {
+        isSyncRunning = false;
     }
 };
 
@@ -276,7 +303,8 @@ const startCronJob = async () => {
         const config = await db.get('SELECT cronExpression, active FROM IntegrationConfig WHERE id = 1');
 
         if (currentCronJob) {
-            currentCronJob.stop();
+            currentCronJob.destroy();
+            currentCronJob = null;
         }
 
         if (config && config.active) {
@@ -287,8 +315,8 @@ const startCronJob = async () => {
                 currentCronJob = cron.schedule(expr, async () => {
                     console.log('Iniciando sincronização via Cron Job...');
                     await executeSync();
-                });
-                console.log(`Cron Job de Integração agendado. Expressão: [${expr}]`);
+                }, { timezone: CRON_TIMEZONE });
+                console.log(`Cron Job de Integração agendado. Expressão: [${expr}] (${CRON_TIMEZONE})`);
             } else {
                 console.error(`Expressão CRON inválida: ${expr}`);
             }
@@ -307,6 +335,7 @@ const reloadCron = async () => {
 
 module.exports = {
     executeSync,
+    isSyncInProgress,
     startCronJob,
     reloadCron
 };

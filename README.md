@@ -19,6 +19,7 @@ Esta é uma API Node.js desenvolvida para atuar como uma interface simplificada 
 A API já acompanha uma interface administrativa interna para gerenciamento da integração com o ERP Mega.
 
 - **URL Padrão**: `http://localhost:9137/admin.html`
+- **Acesso protegido**: o painel e as rotas `/api/v1/integration/*` exigem login (HTTP Basic). Defina `ADMIN_USER` e `ADMIN_PASSWORD` no `.env`; sem essas variáveis o painel fica bloqueado.
 - **Configurações Dinâmicas**: Definição da URL do Mega, usuário, cron fields (dias/horas de execução automática) e senhas pela tela.
 - **De-Para Visual**: Relacionamento nativo de códigos do Mega (ex: `15`) com a respectiva base governamental (ex: `IPCA`).
 - **Histórico de Execuções e Filtros**: Tela de logs com suporte a pesquisa por período de datas (DD/MM/AAAA), seleção flexível de quantidade (limitador) e até buscas diretas por Status (`Sucesso`, `Atenção`, `Erro`, `Aviso`).
@@ -47,12 +48,20 @@ cd Indices-API
 npm install
 ```
 
-3. Inicie o servidor:
+3. Crie um arquivo `.env` na raiz:
+```env
+PORT=9137
+HOST=localhost
+ADMIN_USER=admin
+ADMIN_PASSWORD=troque-esta-senha
+```
+
+4. Inicie o servidor:
 ```bash
 npm run dev
 ```
 
-4. Acesse:
+5. Acesse:
 - **Painel de Testes Interativo**: [http://localhost:9137/](http://localhost:9137/)
 - **Documentação Swagger**: [http://localhost:9137/api-docs/](http://localhost:9137/api-docs/)
 

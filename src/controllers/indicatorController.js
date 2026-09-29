@@ -1,17 +1,8 @@
 const ipeaService = require('../services/ipeaService');
+const { mainIndicators, findIndicator } = require('../config/indicators');
 
-// Mapeamento dos indicadores principais solicitados
-const mainIndicators = [
-    // Indicadores originais
-    { id: 'IPCA', code: 'PRECOS12_IPCAG12', description: 'Índice Nacional de Preços ao Consumidor Amplo (IPCA)' },
-    { id: 'IGPM', code: 'IGP12_IGPMG12', description: 'Índice Geral de Preços - Mercado (IGP-M)' },
-    { id: 'INCC', code: 'IGP12_INCCG12', description: 'Índice Nacional de Custo da Construção (INCC)' },
-
-    // Novos indicadores de série
-    { id: 'IPCA12', code: 'PRECOS12_IPCA12', description: 'Índice Nacional de Preços ao Consumidor Amplo (IPCA12)' },
-    { id: 'IGPM12', code: 'IGP12_IGPM12', description: 'Índice Geral de Preços - Mercado (IGPM12)' },
-    { id: 'INCC12', code: 'IGP12_INCCMG12', description: 'Índice Nacional de Custo da Construção (INCC12)' }
-];
+// Códigos do Ipeadata contêm apenas letras, números e underscore
+const SERIES_CODE_PATTERN = /^[A-Za-z0-9_]+$/;
 
 /**
  * Função utilitária para formatar a data (AAAA-MM-DD para DD/MM/AAAA)
@@ -48,6 +39,13 @@ const listIndicators = (req, res) => {
  */
 const getIndicatorByCode = async (req, res) => {
     const { code } = req.params;
+
+    if (!SERIES_CODE_PATTERN.test(code)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Código de série inválido. Use apenas letras, números e "_".'
+        });
+    }
 
     try {
         // Busca os metadados e os valores da série em paralelo
@@ -88,7 +86,7 @@ const getMonthlyVariation = async (req, res) => {
     }
 
     // Busca nas configurações locais
-    const indicatorConfig = mainIndicators.find(ind => ind.id.toUpperCase() === indice.toUpperCase());
+    const indicatorConfig = findIndicator(indice);
 
     if (!indicatorConfig) {
         const available = mainIndicators.map(i => i.id).join(', ');
@@ -141,7 +139,7 @@ const getHistoricalSeries = async (req, res) => {
     }
 
     // Busca nas configurações locais
-    const indicatorConfig = mainIndicators.find(ind => ind.id.toUpperCase() === indice.toUpperCase());
+    const indicatorConfig = findIndicator(indice);
 
     if (!indicatorConfig) {
         const available = mainIndicators.map(i => i.id).join(', ');
@@ -154,12 +152,15 @@ const getHistoricalSeries = async (req, res) => {
     try {
         const seriesData = await ipeaService.getIndicatorData(indicatorConfig.code);
 
-        // O Ipeadata normalmente retorna os dados em ordem cronológica.
-        // Precisamos calcular a variação: (valor_atual / valor_anterior - 1) * 100
-        // Para isso, faremos o cálculo baseando-se no array original (seriesData)
-        // para termos acesso ao mês anterior mesmo se ele ficar fora do filtro de data.
-
+        // Para números-índice calculamos a variação: (valor_atual / valor_anterior - 1) * 100,
+        // usando o array completo (seriesData, já em ordem cronológica) para ter acesso ao mês
+        // anterior mesmo se ele ficar fora do filtro de data.
+        // Séries que já vêm em % a.m. são repassadas como estão.
         const calculatedData = seriesData.map((item, index, array) => {
+            if (!indicatorConfig.isIndexNumber) {
+                return { ...item, VALVALOR_VAR: item.VALVALOR };
+            }
+
             let varValor = 0;
             if (index > 0) {
                 const prev = array[index - 1].VALVALOR;

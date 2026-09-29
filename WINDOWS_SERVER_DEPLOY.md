@@ -29,7 +29,10 @@ Esta opção é mais simples para ambientes de produção limpos, pois utiliza o
    ```env
    PORT=9137
    HOST=localhost
+   ADMIN_USER=admin
+   ADMIN_PASSWORD=troque-esta-senha
    ```
+   **Importante:** `ADMIN_USER` e `ADMIN_PASSWORD` são o login do painel administrativo (`/admin.html`). Sem eles o painel fica bloqueado.
    **Dica:** Ao alterar a porta no `.env`, o executável assumirá a nova porta ao iniciar!
 
 ### 2. Configurando como um Serviço do Windows com NSSM
